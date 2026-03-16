@@ -1,0 +1,80 @@
+zabbix_export:
+  version: '7.0'
+template_groups:
+  - uuid: 36bff6c29af64692839d077febfc7079
+    name: 'Templates/Network devices'
+templates:
+  - uuid: 42a7bf7efeef43e4847602ca7af1c69a
+    template: 'Template Ubiquiti UniFi Pro AP and Switch by API'
+    name: 'Template Ubiquiti UniFi Pro AP and Switch by API'
+    groups:
+      - name: 'Templates/Network devices'
+    items:
+      - uuid: 937288764d3d43098819bfa2848e820b
+        name: 'Get UniFi Devices'
+        type: SCRIPT
+        key: unifi.api.devices
+        value_type: TEXT
+        trends: '0'
+        params: |
+          var req = new HttpRequest();
+          req.addHeader('Content-Type: application/json');
+          // 1. Realiza a autenticação na API UniFi.
+          // Utilize as macros {$UNIFI.HOST}, {$UNIFI.PORT}, {$UNIFI.USER} e {$UNIFI.PASS}
+          // que devem ser configuradas na aba de Macros do Template ou do Host.
+          // Exemplo de valores para as macros:
+          // {$UNIFI.HOST} = 192.168.1.100 (IP fictício da controladora UniFi)
+          // {$UNIFI.PORT} = 8443 (Porta padrão da API UniFi)
+          // {$UNIFI.USER} = usuario_api_generico
+          // {$UNIFI.PASS} = SenhaSegura123!
+          req.post(
+              'https://{$UNIFI.HOST}:{$UNIFI.PORT}/api/login',
+              JSON.stringify({"username":"{$UNIFI.USER}", "password":"{$UNIFI.PASS}"})
+          );
+          // 2. Após a autenticação, coleta os dados dos dispositivos.
+          var data = req.get('https://{$UNIFI.HOST}:{$UNIFI.PORT}/api/s/default/stat/device');
+          return data;
+    discovery_rules:
+      - uuid: ae54228676514f23971a8dbc5ec640e0
+        name: 'Descoberta de Dispositivos UniFi'
+        type: DEPENDENT
+        key: unifi.discovery
+        delay: '0'
+        item_prototypes:
+          - uuid: f357183d8d444f87a2fe61a477947022
+            name: 'Status do AP: {#NAME}'
+            type: DEPENDENT
+            key: 'unifi.ap.status[{#MAC}]'
+            delay: '0'
+            value_type: TEXT
+            trends: '0'
+            preprocessing:
+              - type: JSONPATH
+                parameters:
+                  - '$.data[?(@.mac == "{#MAC}")].state.first()'
+            master_item:
+              key: unifi.api.devices
+          - uuid: e20d33220d4e47d68475b64ad7cd7f36
+            name: 'Atualização pendente: {#NAME}'
+            type: DEPENDENT
+            key: 'unifi.ap.upgrade[{#MAC}]'
+            delay: '0'
+            value_type: TEXT
+            trends: '0'
+            preprocessing:
+              - type: JSONPATH
+                parameters:
+                  - '$.data[?(@.mac == "{#MAC}")].upgradable.first()'
+            master_item:
+              key: unifi.api.devices
+        master_item:
+          key: unifi.api.devices
+        lld_macro_paths:
+          - lld_macro: '{#MAC}'
+            path: $.mac
+          - lld_macro: '{#NAME}'
+            path: $.name
+        preprocessing:
+          - type: JSONPATH
+            parameters:
+              - $.data
