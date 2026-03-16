@@ -1,172 +1,72 @@
-# 📘 Manual de Implementação: Monitoramento Ubiquiti UniFi via API (Zabbix 7.0+)
+# 📘 Monitoramento Ubiquiti UniFi via API no Zabbix 7.0+
 
-Este manual detalha a criação e configuração de um monitoramento robusto para controladoras Ubiquiti UniFi, utilizando a API oficial. Esta solução resolve especificamente o erro de compatibilidade de JavaScript (`ReferenceError: host is not defined`) presente no Zabbix 7.0+.
+Bem-vindo ao repositório do manual de implementação e template para monitoramento de controladoras Ubiquiti UniFi utilizando a API oficial, compatível com Zabbix 7.0+.
 
-## 1. Configuração no Controlador Ubiquiti UniFi
+Este guia e template foram criados para ajudar administradores de sistemas e entusiastas de monitoramento a configurar um sistema robusto e eficiente, resolvendo problemas comuns de compatibilidade de JavaScript (`ReferenceError: host is not defined`) encontrados na versão 7.0+ do Zabbix.
 
-O primeiro passo é criar uma conta de serviço dedicada na sua controladora.
+## Conteúdo do Repositório
 
-### 1.1 Criar Utilizador de Serviço
+*   **`Ubiquiti_UniFi_Zabbix_API_Monitoring.md`**: Manual detalhado de implementação passo a passo.
+*   **`template_ubiquiti_unifi_sanitized_generic.yaml`**: Template Zabbix exportado (YAML) pronto para importação, com macros para dados sensíveis.
 
-1.  Aceda à interface web da sua Controladora UniFi.
-2.  Vá a `Settings` (ícone da engrenagem no canto inferior esquerdo).
-3.  Selecione `Admins & Users`.
-4.  Clique na aba `Users` e depois em `Add New User`.
-5.  Preencha os campos conforme abaixo:
-    *   **First Name / Last Name**: `Zabbix API`
-    *   **Username**: `zabbix_user`
-    *   **Password**: Defina uma password forte (ex: `Zabbix@UniFi#2026`).
-    *   Em `Application Permissions`:
-        *   Na aplicação `Network`, selecione a permissão `Read Only` (Leitura).
+## Como Utilizar o Template Zabbix
 
-> ⚠️ **Nota de Segurança**: Certifique-se de que a opção `Multi-Factor Authentication (MFA)` está **DESATIVADA** para este utilizador, pois a API do Zabbix não suporta tokens dinâmicos.
+Para utilizar o template `template_ubiquiti_unifi_sanitized_generic.yaml` no seu ambiente Zabbix, siga os passos abaixo:
 
-## 2. Configuração do Template no Zabbix
+### 1. Importar o Template
 
-Não configure diretamente no Host. Crie um Template para que o monitoramento seja reutilizável.
+1.  Aceda à interface web do Zabbix.
+2.  Navegue até `Configuration` > `Templates`.
+3.  No canto superior direito, clique em `Import`.
+4.  Clique em `Choose file` e selecione o arquivo `template_ubiquiti_unifi_sanitized_generic.yaml` que você descarregou deste repositório.
+5.  Certifique-se de que as opções de importação estão corretas (geralmente as predefinições são suficientes).
+6.  Clique em `Import`.
 
-### 2.1 Criar o Template
+### 2. Configurar Macros Essenciais
 
-1.  Aceda ao Zabbix: `Data collection` > `Templates`.
-2.  Clique no botão `Create template` (topo direito).
-3.  Preencha os campos:
-    *   **Template name**: `Ubiquiti UniFi API Custom 7.0`
-    *   **Groups**: Selecione um grupo (ex: `Templates/Network devices`).
-4.  Clique em `Add`.
+O template utiliza macros para armazenar informações sensíveis e específicas do seu ambiente UniFi. Após a importação, você **DEVE** configurar estas macros no seu **Host** ou no **Template** (se quiser que se aplique a todos os hosts vinculados a ele).
 
-### 2.2 Configurar Macros do Template
+1.  Navegue até `Configuration` > `Hosts` (ou `Templates` se for configurar no template).
+2.  Selecione o Host (ou Template) onde o `Template Ubiquiti UniFi Pro AP and Switch by API` está vinculado.
+3.  Clique na aba `Macros`.
+4.  Adicione as seguintes macros, substituindo os valores pelos dados reais da sua controladora UniFi:
 
-As macros garantem que o script seja dinâmico. Dentro do Template, clique na aba `Macros`.
+    | Macro             | Descrição                                         | Exemplo de Valor (Fictício) |
+    | :---------------- | :------------------------------------------------ | :-------------------------- |
+    | `{$UNIFI.HOST}`   | IP ou FQDN da sua controladora UniFi.             | `192.168.1.100`             |
+    | `{$UNIFI.PORT}`   | Porta da API UniFi (geralmente 8443 ou 443).      | `8443`                      |
+    | `{$UNIFI.USER}`   | Nome de utilizador da conta de serviço da API UniFi (criada no passo 1.1 do manual). | `zabbix_user`               |
+    | `{$UNIFI.PASS}`   | Senha da conta de serviço da API UniFi.           | `SuaSenhaSecretaAqui!`      |
 
-Adicione as seguintes macros:
+5.  Clique em `Update` para salvar as macros.
 
-| Macro             | Valor                               |
-| :---------------- | :---------------------------------- |
-| `{$UNIFI.USER}`   | `zabbix_user`                       |
-| `{$UNIFI.PASS}`   | `A_Sua_Password_Definida`           |
-| `{$UNIFI.PORT}`   | `8443` (Ou `443` conforme o seu ambiente) |
+### 3. Vincular o Template a um Host
 
-> 💡 **OBSERVAÇÃO IMPORTANTE (AUTENTICAÇÃO)**:
-> Os dados inseridos nestas macros são vitais para o funcionamento de todo o monitoramento. O script de descoberta e coleta utiliza estas variáveis para realizar a Fase de Autenticação na API da Ubiquiti. Certifique-se de que o utilizador e a password correspondem exatamente ao que foi criado na Controladora (Passo 1.1). Sem estas credenciais corretas, o Zabbix receberá um erro de "Acesso Negado" (Status 401 ou 403).
+Se ainda não o fez, vincule o template ao seu host Zabbix que representa a controladora UniFi:
 
-## 3. Regra de Descoberta (LLD) e Script Corrigido
+1.  Navegue até `Configuration` > `Hosts`.
+2.  Selecione o host da sua controladora UniFi.
+3.  Clique na aba `Templates`.
+4.  Adicione o `Template Ubiquiti UniFi Pro AP and Switch by API`.
+5.  Clique em `Update`.
 
-Esta é a parte vital onde corrigimos o erro de JavaScript do Zabbix 7.0.
+### 4. Verificar o Monitoramento
 
-### 3.1 Criar Regra de Descoberta
-
-No Template, clique na aba `Discovery rules`.
-
-1.  Clique em `Create discovery rule`.
-2.  Preencha os campos:
-    *   **Name**: `UniFi Sites Discovery`
-    *   **Type**: `Script`
-    *   **Key**: `unifi.sites.discovery`
-
-### 3.2 Parâmetros e Código (O Ajuste Técnico)
-
-No campo `Parameters`, clique em `Add` para inserir os 4 mapeamentos obrigatórios:
-
-| Name       | Value                  |
-| :--------- | :--------------------- |
-| `host`     | `{HOST.CONN}`          |
-| `port`     | `{$UNIFI.PORT}`        |
-| `user`     | `{$UNIFI.USER}`        |
-| `password` | `{$UNIFI.PASS}`        |
-
-No campo `Script`, clique no ícone do Lápis e cole o código abaixo (Refatorizado para Zabbix 7):
-
-> **OBS**: Edite os campos de login para que seu Zabbix comunique com o controlador Ubiquiti.
-
-```javascript
-// O Zabbix 7.0+ exige a declaração explícita de variáveis mapeadas do JSON 'value'
-var obj = JSON.parse(value);
-
-var host = obj.host;
-var port = obj.port;
-var user = obj.user;
-var password = obj.password;
-
-var response, login = new HttpRequest();
-login.addHeader('Content-Type: application/json'); 
-
-// --- FASE DE AUTENTICAÇÃO ---
-
-response = login.post(
-  'https://'+host+':'+port+'/api/login',
-  '{"username": "'+user+'", "password": "'+password+'"}'
-);
-
-if (login.getStatus() !== 200) {
-  throw 'Falha no login API UniFi. Status: ' + login.getStatus();
-}
-
-// 2. Coleta de Dados do Site (Padrão: default)
-var site = 'default';
-var url = 'https://'+host+':'+port+'/api/s/'+site+'/stat/sysinfo';
-
-try {
-  response = login.get(url);
-  response = JSON.parse(response);
-} catch (error) {
-  throw 'Erro ao processar resposta JSON da Controladora';
-}
-
-// Retorna os dados para os Protótipos de Itens
-return JSON.stringify(response.data);
-```
-
-## 4. Protótipos de Itens e Gatilhos (Triggers)
-
-### 4.1 Criar Protótipo de Item
-
-Dentro da regra de descoberta, clique em `Item prototypes`.
-
-1.  Clique em `Create item prototype`.
-2.  Preencha os campos:
-    *   **Name**: `UniFi Site Info: {#DESC}`
-    *   **Type**: `Dependent item`.
-    *   **Key**: `unifi.site.info[{#DESC}]`
-    *   **Master item**: Selecione a própria regra de descoberta ou o item mestre de coleta.
-
-### 4.2 Criar Protótipo de Gatilho (Trigger)
-
-Clique em `Trigger prototypes` > `Create trigger prototype`.
-
-1.  Preencha os campos:
-    *   **Name**: `UniFi: Status do Subsistema {#DESC} em {HOST.NAME} não está OK`
-    *   **Expression**: `{Ubiquiti UniFi API Custom 7.0:unifi.site.info[{#DESC}].last()}<>"ok"`
-    *   **Severity**: `High` (Alta).
-
-## 5. Implementação no Host
-
-Vá a `Data collection` > `Hosts`.
-
-1.  Crie ou edite o seu Host (Ex: `SW-UBIQUITI-PRO`).
-2.  **Interface Agent**: Adicione o IP real da controladora UniFi (Ex: `192.168.1.54`).
-3.  **Templates**: Vincule o template `Ubiquiti UniFi API Custom 7.0`.
-
-### 5.1 Atualização Imediata (Forçar Coleta)
-
-Para não esperar pelo ciclo de atualização:
+Após configurar as macros e vincular o template, o Zabbix começará a coletar dados. Você pode forçar a descoberta e verificar os dados:
 
 1.  No Host, vá a `Discovery rules`.
-2.  Marque a regra e clique em `Execute now`.
-3.  Vá a `Monitoring` > `Latest data` e valide se o JSON está a chegar.
+2.  Marque a regra `Descoberta de Dispositivos UniFi` e clique em `Execute now`.
+3.  Vá a `Monitoring` > `Latest data` e valide se os dados dos dispositivos UniFi estão a chegar.
 
-## 6. Saneamento do Dashboard (Falsos Positivos)
+## Como Contribuir
 
-Se o seu ambiente possui apenas Switches e APs, a API reportará "Unknown" para WAN e VPN.
+Sinta-se à vontade para abrir `issues` para sugestões, melhorias ou dúvidas. Pull requests são sempre bem-vindos!
 
-1.  Vá aos `Items` do Host.
-2.  Filtre por: `WAN Status`, `VPN Status` e `WWW Status`.
-3.  Selecione-os e clique em `Disable` (Desativar).
+## Licença
 
-Isto limpará os alertas vermelhos desnecessários do seu painel principal.
+Este projeto está licenciado sob a Licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
 
----
+--- 
 
-**Documentação finalizada. Sistema operacional e monitoramento 100% validados.**
-
-**Autor**: Manus AI
+**Autor**: Luisbnc
 **Data**: 16 de Março de 2026
